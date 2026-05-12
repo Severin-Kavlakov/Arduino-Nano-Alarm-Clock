@@ -22,6 +22,8 @@ pin stopAlarm = 7;
 pin cursorToHours = 8;
 pin cursorToMinutes = 9;
 
+pin activeBuzzer = 10;
+
 
 
 
@@ -34,7 +36,7 @@ bool  buttonState=false, prevButtonState=false;
 
 
 // FUNCTIONS ------------------------------------------------------------------------------
-
+/*
 char bufferFloat[5];
 char* float_out(float f) {
   dtostrf(f, sizeof(bufferFloat), 2, bufferFloat); //decimals
@@ -46,9 +48,21 @@ char* uint16_t_out(uint16_t i) {
   sprintf(bufferUint16, "%5d", i);
   return bufferUint16;
 }
+*/
+
+void outHz(uint8_t freaquencyHz) { //needs work on the i<100 part
+  uint8_t delayMs = freaquencyHz/1000;
+
+  for(uint16_t i=0;   i < 100;   i++) {
+    digitalWrite(activeBuzzer, HIGH); delay(delayMs);
+    digitalWrite(activeBuzzer, LOW ); delay(delayMs);
+  }
+}
 
 
 
+
+// MAIN -----------------------------------------------------------------------------------
 
 void setup() {
   Serial.begin(9600);
@@ -66,7 +80,7 @@ void setup() {
 
 
 void loop() {
-
+/*
   (digitalRead(buttonPin)) ?    buttonState = true : buttonState = false; // read button
   if (buttonState == false && prevButtonState == true) {                  // if button pressed
 
@@ -75,13 +89,16 @@ void loop() {
 
   }
   prevButtonState = buttonState; // 2nd sample of button to check if pressed 
+*/
+  
+
+
 
   
 
-  Serial.print("      ");
+  //Serial.print(); Serial.print(" ");
 
-  Serial.print(float_out(B)); Serial.print(" B");
-
+  //Serial.print("      ");
 
   Serial.println("");
 
