@@ -5,6 +5,7 @@
 
 
 // PINS -----------------------------------------------------------------------------------
+
 typedef const uint8_t pin;
 
 pin 
@@ -17,10 +18,11 @@ pin
 LiquidCrystal lcd(RS, E, D4, D5, D6, D7);
 
 pin potentiometerChooseTime = A0;
-pin setAlarm = 6;
-pin stopAlarm = 7;
-pin cursorToHours = 8;
-pin cursorToMinutes = 9;
+
+pin stopAlarm = 6;
+pin setAlarm = 7;
+pin chooseHours = 8;
+pin chooseMinutes = 9;
 
 pin activeBuzzer = 10;
 
@@ -30,7 +32,15 @@ pin activeBuzzer = 10;
 
 // VARIABLES ------------------------------------------------------------------------------
 
-bool  buttonState=false, prevButtonState=false;
+bool cursorAtHours=true;
+
+uint64_t currentMillis = 0;
+uint64_t prevMillis = 0;
+
+bool  setAlarmState=false,      prev_setAlarmState=false;
+bool  stopAlarmState=false,     prev_stopAlarmState=false;
+bool  chooseHoursState=false,   prev_chooseHoursState=false;
+bool  chooseMinutesState=false, prev_chooseMinutesState=false;
 
 
 
@@ -50,60 +60,54 @@ char* uint16_t_out(uint16_t i) {
 }
 */
 
-void outHz(uint8_t freaquencyHz) { //needs work on the i<100 part
-  uint8_t delayMs = freaquencyHz/1000;
-
-  for(uint16_t i=0;   i < 100;   i++) {
-    digitalWrite(activeBuzzer, HIGH); delay(delayMs);
-    digitalWrite(activeBuzzer, LOW ); delay(delayMs);
-  }
+void startAlarm() {
+  tone(activeBuzzer, 5000, 1000);
 }
 
 
 
 
-// MAIN -----------------------------------------------------------------------------------
 
 void setup() {
-  Serial.begin(9600);
   lcd.begin(16, 2);
 
+  lcd.setCursor(3, 0); lcd.print(":");
 
+  delay(1000);
 
-
-
-
-  delay(1000); //debigging
 }
-
-
 
 
 void loop() {
-/*
-  (digitalRead(buttonPin)) ?    buttonState = true : buttonState = false; // read button
-  if (buttonState == false && prevButtonState == true) {                  // if button pressed
+
+(digitalRead(chooseHours)) ?   chooseHoursState = true : chooseHoursState = false;
+if (chooseHoursState == false && prev_chooseHoursState == true) {
+  cursorAtHours = true;
+  lcd.setCursor(4,1); lcd.print("  ");
+  lcd.setCursor(1,1); lcd.print("^^");
+} 
+prev_chooseHoursState = chooseHoursState;
+
+(digitalRead(chooseMinutes)) ?   chooseMinutesState = true : chooseMinutesState = false;
+if (chooseMinutesState == false && prev_chooseMinutesState == true) {
+  cursorAtHours = false;
+  lcd.setCursor(1,1); lcd.print("  ");
+  lcd.setCursor(4,1); lcd.print("^^");
+} 
+prev_chooseMinutesState = chooseMinutesState;
 
 
 
 
-  }
-  prevButtonState = buttonState; // 2nd sample of button to check if pressed 
-*/
-  
+
+
+(digitalRead(setAlarm)) ?   setAlarmState = true : setAlarmState = false;
+if (setAlarmState == false && prev_setAlarmState == true) {
+  startAlarm();
+}
+prev_setAlarmState = setAlarmState;
 
 
 
-  
-
-  //Serial.print(); Serial.print(" ");
-
-  //Serial.print("      ");
-
-  Serial.println("");
-
-
-
-
-  delay(50);
+ 
 }
