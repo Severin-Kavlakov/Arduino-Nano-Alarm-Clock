@@ -42,25 +42,30 @@ bool  stopAlarmState=false,     prev_stopAlarmState=false;
 bool  chooseHoursState=false,   prev_chooseHoursState=false;
 bool  chooseMinutesState=false, prev_chooseMinutesState=false;
 
+uint16_t potentiometerValue = 0;
 
+uint8_t hours = 0;
+uint8_t minutes = 0;
 
 
 // FUNCTIONS ------------------------------------------------------------------------------
-/*
+
 char bufferFloat[5];
-char* float_out(float f) {
+char* format_float(float f) {
   dtostrf(f, sizeof(bufferFloat), 2, bufferFloat); //decimals
   return bufferFloat;
 }
 
-char bufferUint16[5];
-char* uint16_t_out(uint16_t i) {
-  sprintf(bufferUint16, "%5d", i);
-  return bufferUint16;
+char bufferUint8[2];
+char* format_uint8_t(uint8_t i) {
+  sprintf(bufferUint8, "%2d", i);
+  return bufferUint8;
 }
-*/
+
 
 void startAlarm() {
+  //wait some time
+  //set off alarm
   tone(activeBuzzer, 5000, 1000);
 }
 
@@ -71,7 +76,7 @@ void startAlarm() {
 void setup() {
   lcd.begin(16, 2);
 
-  lcd.setCursor(3, 0); lcd.print(":");
+  lcd.setCursor(2, 0); lcd.print(":");
 
   delay(1000);
 
@@ -80,23 +85,33 @@ void setup() {
 
 void loop() {
 
+  
 (digitalRead(chooseHours)) ?   chooseHoursState = true : chooseHoursState = false;
 if (chooseHoursState == false && prev_chooseHoursState == true) {
   cursorAtHours = true;
-  lcd.setCursor(4,1); lcd.print("  ");
-  lcd.setCursor(1,1); lcd.print("^^");
+  lcd.setCursor(3,1); lcd.print("  ");
+  lcd.setCursor(0,1); lcd.print("^^");
 } 
 prev_chooseHoursState = chooseHoursState;
+
 
 (digitalRead(chooseMinutes)) ?   chooseMinutesState = true : chooseMinutesState = false;
 if (chooseMinutesState == false && prev_chooseMinutesState == true) {
   cursorAtHours = false;
-  lcd.setCursor(1,1); lcd.print("  ");
-  lcd.setCursor(4,1); lcd.print("^^");
+  lcd.setCursor(0,1); lcd.print("  ");
+  lcd.setCursor(3,1); lcd.print("^^");
 } 
 prev_chooseMinutesState = chooseMinutesState;
 
 
+if(cursorAtHours) {
+  hours = map(/*potentiometerValue*/analogRead(potentiometerChooseTime), 0, 1023, 0, 13);
+  lcd.setCursor(0, 0); lcd.print(format_uint8_t(hours));
+}
+else {
+  minutes = map(/*potentiometerValue*/analogRead(potentiometerChooseTime), 0, 1023, 0, 60);
+  lcd.setCursor(3, 0); lcd.print(format_uint8_t(minutes));
+}
 
 
 
@@ -109,5 +124,5 @@ prev_setAlarmState = setAlarmState;
 
 
 
- 
+delay(20);
 }
