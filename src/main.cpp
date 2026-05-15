@@ -34,31 +34,34 @@ bool  stopAlarmState     = false,   prev_stopAlarmState     = false;
 bool  chooseHoursState   = false,   prev_chooseHoursState   = false;
 bool  chooseMinutesState = false,   prev_chooseMinutesState = false;
 
-bool cursorAtHours=true;
+uint8_t cursorAtHours = 2; // other number than 0 or 1 
 
-const uint8_t START_HOUR   = 22;
-const uint8_t START_MINUTE = 06;
+const uint8_t START_HOUR   = 19;
+const uint8_t START_MINUTE = 23;
 
 uint8_t endHour   = 0;
 uint8_t endMinute = 0;
 
-uint8_t currentHour   = 0; //need function to calc this
+uint8_t currentHour   = 0;
 uint8_t currentMinute = 0;
 
+uint8_t waitHours = 0;
+uint8_t waitMinutes = 0;
 
 
 
-// FUNCTIONS ------------------------------------------------------------------------------
+
 
 
 // format uint8_t to be 2 chars wide ALWAYS 
-char bufferUint8[2];
+char bufferUint8[3];
 char* format_uint8_t(uint8_t i) { // WILL prolly need custom funct to print 0 before 1 sized ints
-  sprintf(bufferUint8, "%2d", i);
+  sprintf(bufferUint8, "%02d", i); // 0 - added
   return bufferUint8;
 }
 
 
+// turn alarm on or off
 void switch_alarm(bool on) {
   while(on==true) {
     tone(activeBuzzer, 5000, 1000);
@@ -67,25 +70,56 @@ void switch_alarm(bool on) {
 }
 
 
-void calc_wait_time(uint8_t endHour, uint8_t endMinute, 
-              uint8_t START_HOUR, uint8_t START_MINUTE)
+// curr time = start time + time after boot
+void find_current_time( uint32_t currentMillis, //temp 32
+                        const uint8_t START_HOUR, const uint8_t START_MINUTE,
+                        uint8_t& currentHour,     uint8_t& currentMinute 
+                      )
+// NOT passing by pointer BUT by address, 
+// bc C+ automatically treats every instance of &x as x
+// -saves unnecessary syntax
 {
-  // calc wait time
-  // wait from calculated wait time ; PUT TO SLEEP
-  // SWITCH ALARM
+  uint32_t minutesFromStart = (currentMillis/1000) / 60; // PROBLEM - too small //temporary to uint32 ; ideally uint64 => 32sh lasts 49 adys wihtout reboot
+  //currentMillis - smaller than 1000
+  
+  uint32_t minutesFromDayOfBoot = (START_HOUR * 60) + START_MINUTE; // correct
+
+  uint32_t totalMinutes = minutesFromStart + minutesFromDayOfBoot;
+
+
+  uint16_t minutesFromCurrentDay = totalMinutes % (24*60); // 96 out - smth wrong => totalMins is MUCH smaller tha nexpected
+
+  currentHour   = minutesFromCurrentDay / 60; // divide by 60 to get hours, int division excludes minutes
+  currentMinute = minutesFromCurrentDay % 60; // leftover from division by 60 = ONLY minutes
+
+  Serial.print(minutesFromCurrentDay); Serial.print("  "); 
+  Serial.print(minutesFromStart); Serial.print("  ");
+  Serial.print(currentMillis); Serial.print("  ");
+  Serial.print(totalMinutes);
+  
+  
+  Serial.println("");
 }
 
 
-void find_current_time( uint64_t currentMillis,
-                        uint8_t currentHour, uint8_t currentMinute,    
-                        uint8_t START_HOUR, uint8_t START_MINUTE) 
+// calc wait time for Arduino to sleep, based on current time and input from user
+void calc_wait_time( uint8_t currentHour, uint8_t currentMinute,
+                     uint8_t endHour,     uint8_t endMinute,
+                     uint8_t waitHours,   uint8_t waitMinutes 
+                   )
 {
-  //convert millis passed from start to minutes passed from start
-
-  // curr time = start time + converted into minutes
+  
 }
 
 
+// put to sleep until alarm has to ring
+void set_alarm() {
+  // wait PUT TO SLEEP for calculated wait time
+
+
+  // SWITCH ALARM ON
+
+}
 
 
 
@@ -97,10 +131,13 @@ void setup() {
 
   lcd.setCursor(2, 0); lcd.print(":");
 
-  lcd.print(7, 0); lcd.print(":");
+  lcd.setCursor(13, 0); lcd.print(":");
 
-  delay(1000);
+  delay(2000);
+
+  Serial.begin(9600);
 }
+
 
 
 void loop() {
@@ -110,16 +147,15 @@ currentMillis = millis();
 
 (digitalRead(chooseHours)) ?   chooseHoursState = true : chooseHoursState = false;
 if (chooseHoursState == false && prev_chooseHoursState == true) {
-  cursorAtHours = true;
+  cursorAtHours = 1;
   lcd.setCursor(3,1); lcd.print("  ");
   lcd.setCursor(0,1); lcd.print("^^");
 }
 prev_chooseHoursState = chooseHoursState;
 
-
 (digitalRead(chooseMinutes)) ?   chooseMinutesState = true : chooseMinutesState = false;
 if (chooseMinutesState == false && prev_chooseMinutesState == true) {
-  cursorAtHours = false;
+  cursorAtHours = 0;
   lcd.setCursor(0,1); lcd.print("  ");
   lcd.setCursor(3,1); lcd.print("^^");
 }
@@ -128,12 +164,13 @@ prev_chooseMinutesState = chooseMinutesState;
 
 
 
-if(cursorAtHours) {
-  endHour = map(  analogRead(potentiometerChooseTime),    0, 1023,     0, 13);
+
+if(cursorAtHours == 1) {
+  endHour = map(  analogRead(potentiometerChooseTime),    0, 1023,     0, 24);
 
   lcd.setCursor(0, 0); lcd.print(format_uint8_t(endHour));
 }
-else {
+if(cursorAtHours == 0){
   endMinute = map( analogRead(potentiometerChooseTime),   0, 1023,     0, 60);
 
   lcd.setCursor(3, 0); lcd.print(format_uint8_t(endMinute));
@@ -142,12 +179,12 @@ else {
 
 
 
+
 (digitalRead(setAlarm)) ?   setAlarmState = true : setAlarmState = false;
 if (setAlarmState == false && prev_setAlarmState == true) {
-  switch_alarm(true);
+  // set alarm
 }
 prev_setAlarmState = setAlarmState;
-
 
 (digitalRead(stopAlarm)) ?   stopAlarmState = true : stopAlarmState = false;
 if (stopAlarmState == false && prev_stopAlarmState == true) {
@@ -156,11 +193,19 @@ if (stopAlarmState == false && prev_stopAlarmState == true) {
 prev_stopAlarmState = stopAlarmState;
 
 
-if(currentMillis - prevMillis >= 1000) {
-  lcd.setCursor(11, 0); lcd.print(format_uint8_t()); // current time
-  lcd.setCursor(14, 0); lcd.print(format_uint8_t()); // current time
+
+
+if(currentMillis - prevMillis >= 500) { // every 50 seconds update cuurent time on the display
+  
+  find_current_time(currentMillis, START_HOUR, START_MINUTE, currentHour, currentMinute); //temporary here
+
+  lcd.setCursor(11, 0); lcd.print(format_uint8_t(currentHour)); // current time
+  lcd.setCursor(14, 0); lcd.print(format_uint8_t(currentMinute)); // current time
+
 
   prevMillis = currentMillis;
 }
+
+
 
 }
