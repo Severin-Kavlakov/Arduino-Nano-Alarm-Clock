@@ -27,7 +27,9 @@ pin activeBuzzer = 10;
 
 // VARIABLES ------------------------------------------------------------------------------
 
-uint64_t currentMillis = 0, prevMillis = 0;
+uint64_t currentMillis = 0;
+
+uint64_t prevMillis_PrintCurrentTime = 0, prevMillis_FindCurrentTime = 0, prevMillis_CheckButtons = 0;
 
 bool  setAlarmState      = false,   prev_setAlarmState      = false;
 bool  stopAlarmState     = false,   prev_stopAlarmState     = false;
@@ -37,7 +39,7 @@ bool  chooseMinutesState = false,   prev_chooseMinutesState = false;
 uint8_t cursorAtHours = 2; // other number than 0 or 1 
 
 const uint8_t START_HOUR   = 19;
-const uint8_t START_MINUTE = 23;
+const uint8_t START_MINUTE = 26;
 
 uint8_t endHour   = 0;
 uint8_t endMinute = 0;
@@ -75,40 +77,67 @@ void find_current_time( uint32_t currentMillis, //temp 32
                         const uint8_t START_HOUR, const uint8_t START_MINUTE,
                         uint8_t& currentHour,     uint8_t& currentMinute 
                       )
-// NOT passing by pointer BUT by address, 
-// bc C+ automatically treats every instance of &x as x
-// -saves unnecessary syntax
+// NOT passing by pointer BUT by address, C++ treats every instance of &x as x - saves unnecessary syntax 
 {
-  uint32_t minutesFromStart = (currentMillis/1000) / 60; // PROBLEM - too small //temporary to uint32 ; ideally uint64 => 32sh lasts 49 adys wihtout reboot
-  //currentMillis - smaller than 1000
+  uint32_t minutesFromStart = (currentMillis/1000) / 60;
   
-  uint32_t minutesFromDayOfBoot = (START_HOUR * 60) + START_MINUTE; // correct
+  uint16_t minutesFromDayOfBoot = (START_HOUR * 60) + START_MINUTE;
 
   uint32_t totalMinutes = minutesFromStart + minutesFromDayOfBoot;
 
 
-  uint16_t minutesFromCurrentDay = totalMinutes % (24*60); // 96 out - smth wrong => totalMins is MUCH smaller tha nexpected
+  uint16_t minutesFromCurrentDay = totalMinutes % (24*60);
 
   currentHour   = minutesFromCurrentDay / 60; // divide by 60 to get hours, int division excludes minutes
   currentMinute = minutesFromCurrentDay % 60; // leftover from division by 60 = ONLY minutes
 
+  /*
   Serial.print(minutesFromCurrentDay); Serial.print("  "); 
   Serial.print(minutesFromStart); Serial.print("  ");
   Serial.print(currentMillis); Serial.print("  ");
   Serial.print(totalMinutes);
   
   
-  Serial.println("");
+  Serial.println(""); */
 }
 
 
-// calc wait time for Arduino to sleep, based on current time and input from user
+// calc wait time for Arduino to sleep, based on current time and alarm time
 void calc_wait_time( uint8_t currentHour, uint8_t currentMinute,
                      uint8_t endHour,     uint8_t endMinute,
-                     uint8_t waitHours,   uint8_t waitMinutes 
+                     uint8_t& waitHours,   uint8_t& waitMinutes
                    )
 {
+  if (endHour > currentHour) { 
+
+    waitHours = endHour - currentHour; 
+  }
+  else if (endHour < currentHour) {
+
+    uint8_t partHours = 24 - currentHour;
+    waitHours = partHours + endHour;  
+  }
+  else waitHours = 0;
   
+
+  if (endMinute > currentMinute) {
+
+    waitMinutes = endMinute - currentMinute;
+  }
+  else if (endMinute < currentMinute) { 
+
+    uint8_t partMinutes = 60 - currentMinute;
+    waitMinutes = partMinutes + endMinute;
+
+    if (waitHours == 0) {
+      waitHours = 23;
+    }
+    else {
+      waitHours -= 1; //IN MOST CASES: if end minutres < currentMinutes  => wait time 1 hour less
+    }   
+
+  }
+  else waitMinutes = 0;
 }
 
 
@@ -164,7 +193,6 @@ prev_chooseMinutesState = chooseMinutesState;
 
 
 
-
 if(cursorAtHours == 1) {
   endHour = map(  analogRead(potentiometerChooseTime),    0, 1023,     0, 24);
 
@@ -175,7 +203,6 @@ if(cursorAtHours == 0){
 
   lcd.setCursor(3, 0); lcd.print(format_uint8_t(endMinute));
 }
-
 
 
 
@@ -195,7 +222,8 @@ prev_stopAlarmState = stopAlarmState;
 
 
 
-if(currentMillis - prevMillis >= 500) { // every 50 seconds update cuurent time on the display
+// every 30 seconds update cuиrent time on display
+if(currentMillis - prevMillis_PrintCurrentTime >= 30000) { 
   
   find_current_time(currentMillis, START_HOUR, START_MINUTE, currentHour, currentMinute); //temporary here
 
@@ -203,7 +231,7 @@ if(currentMillis - prevMillis >= 500) { // every 50 seconds update cuurent time 
   lcd.setCursor(14, 0); lcd.print(format_uint8_t(currentMinute)); // current time
 
 
-  prevMillis = currentMillis;
+  prevMillis_PrintCurrentTime = currentMillis;
 }
 
 
