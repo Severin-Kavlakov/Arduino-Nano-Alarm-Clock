@@ -1,6 +1,5 @@
 #include <Arduino.h>
 #include <LiquidCrystal.h>
-//#include <ArduinoLowPower.h>
 
 
 
@@ -25,7 +24,7 @@ pin chooseMinutes = 9;
 
 pin buzzer = 10;
 
-pin wakeUpToResetAlarm = A0;
+pin resetAlarmButton = A0;
 
 
 
@@ -36,7 +35,6 @@ const uint8_t START_HOUR   = 21,
 
 const uint16_t msDebugToSerial = 20;
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
 
 uint32_t ms = 0;
 uint32_t prevMs_SerialDebug = 0;
@@ -138,10 +136,13 @@ void set_alarm(uint8_t waitHours, uint8_t waitMinutes) {
   
   waitMs =  1000UL*( (uint32_t)waitHours*60*60 + (uint32_t)waitMinutes*60 );
 
-  Serial.println("                        ");
+  Serial.println("                                                                                                              ");
   Serial.print(waitMs); Serial.print("ms wait");
 
-  delay(waitMs); // SLEEP for calculated wait time // TEMPORARY
+
+  // sleep for calculated wait time ; wake up if reset alarm button pressed
+  delay(waitMs); // TEMPORARY
+
 
   ring_alarm();
 }
@@ -161,11 +162,12 @@ for(uint8_t freePin=A2; freePin <= A7; freePin++) {
   Serial.println(freePin);//debug
 }
 
-pinMode(potentiometerChooseTime, INPUT);
-pinMode(stopAlarm,               INPUT);
-pinMode(setAlarm,                INPUT);
-pinMode(chooseHours,             INPUT);
-pinMode(chooseMinutes,           INPUT);
+pinMode(potentiometerChooseTime, INPUT_PULLUP);
+pinMode(stopAlarm,               INPUT_PULLUP);
+pinMode(setAlarm,                INPUT_PULLUP);
+pinMode(chooseHours,             INPUT_PULLUP);
+pinMode(chooseMinutes,           INPUT_PULLUP);
+pinMode(resetAlarmButton,        INPUT_PULLUP);
 pinMode(buzzer, OUTPUT);
 
 lcd.begin(16, 2);
@@ -177,8 +179,9 @@ if (! is_start_hour_and_minute_correct(START_HOUR, START_MINUTE)) {
   while(1);
 }
 
-}
 
+
+}
 
 
 
@@ -189,12 +192,12 @@ ms = millis();
 
 
 
-chooseHoursState = digitalRead(chooseHours);
+chooseHoursState = !digitalRead(chooseHours);
 if (chooseHoursState == false && prev_chooseHoursState == true) cursorAtHours = 1;
 prev_chooseHoursState = chooseHoursState;
 
 
-chooseMinutesState = digitalRead(chooseMinutes);
+chooseMinutesState = !digitalRead(chooseMinutes);
 if (chooseMinutesState == false && prev_chooseMinutesState == true) cursorAtHours = 0;
 prev_chooseMinutesState = chooseMinutesState;
 
@@ -228,7 +231,7 @@ lcd.print(format_uint8_t(currentHour)); lcd.print(":"); lcd.print(format_uint8_t
 
 
 
-setAlarmState = digitalRead(setAlarm);
+setAlarmState = !digitalRead(setAlarm);
 if (setAlarmState == false && prev_setAlarmState == true) {
 
   lcd.setCursor(6, 1); lcd.print("Alarm");
@@ -239,7 +242,7 @@ if (setAlarmState == false && prev_setAlarmState == true) {
 prev_setAlarmState = setAlarmState;
 
 
-stopAlarmState = digitalRead(stopAlarm);
+stopAlarmState = !digitalRead(stopAlarm);
 if (stopAlarmState == false && prev_stopAlarmState == true) {
   noTone(buzzer);
 }
