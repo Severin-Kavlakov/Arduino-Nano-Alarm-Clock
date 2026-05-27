@@ -1,8 +1,10 @@
 #include <Arduino.h>
 #include <LiquidCrystal.h>
+#include <avr/sleep.h>
 
-
-
+//TODO: System of menus where on start: map rotation of pot. to scroll thru modes - alarm ; timer
+// alarm: on choose - choose current time ; enter ; choose alarm time ; enter ; wait
+// timer: enter wait time ; wait
 
 typedef const uint8_t pin;
 
@@ -159,7 +161,7 @@ Serial.begin(115200);
 
 for(uint8_t freePin=A2; freePin <= A7; freePin++) {
   pinMode(freePin, INPUT);
-  Serial.println(freePin);//debug
+  //Serial.println(freePin);//debug
 }
 
 pinMode(potentiometerChooseTime, INPUT_PULLUP);
@@ -185,12 +187,10 @@ if (! is_start_hour_and_minute_correct(START_HOUR, START_MINUTE)) {
 
 
 
+
 void loop() {
 
 ms = millis();
-
-
-
 
 chooseHoursState = !digitalRead(chooseHours);
 if (chooseHoursState == false && prev_chooseHoursState == true) cursorAtHours = 1;
