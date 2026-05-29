@@ -54,14 +54,12 @@ uint32_t waitMs = 0;
 uint32_t minutesSinceBoot = 0;
 uint32_t totalMinutes = 0;
 
-
 bool  setAlarmState      = false,   prev_setAlarmState      = false;
 bool  stopAlarmState     = false,   prev_stopAlarmState     = false;
 bool  chooseHoursState   = false,   prev_chooseHoursState   = false;
 bool  chooseMinutesState = false,   prev_chooseMinutesState = false;
 
-uint8_t cursorAtHours = 255; /* other number than 0 or 1 */
-
+uint8_t chooseHours = 255;
 
 
 
@@ -92,8 +90,7 @@ void ring_alarm() {
 // curr time = start time + time after boot
 void find_current_time( uint32_t currentMillis,
                         const uint8_t START_HOUR, const uint8_t START_MINUTE,
-                        uint8_t& currentHour,     uint8_t& currentMinute 
-                      )
+                        uint8_t& currentHour,     uint8_t& currentMinute )
 // not passing by pointer but by address , C++ treats every instance of &x as x , this saves unnecessary syntax 
 {
   minutesSinceBoot = (currentMillis/1000) / 60;
@@ -113,26 +110,23 @@ void find_current_time( uint32_t currentMillis,
 // based on the current time and alarm time, calculate the wait time for the Arduino to sleep
 void calc_wait_time( uint8_t  currentHour, uint8_t  currentMinute,
                      uint8_t  endHour,     uint8_t  alarmMinute,
-                     uint8_t& waitHours,   uint8_t& waitMinutes
-                   )
+                     uint8_t& waitHours,   uint8_t& waitMinutes  )
 {
   if      (endHour > currentHour) waitHours = endHour - currentHour; 
   else if (endHour < currentHour) {
 
-    uint8_t partHours = 24 - currentHour;
-    waitHours = partHours + endHour;  
+    waitHours = (24 - currentHour) + endHour;  
   }
   else waitHours = 0;
   
 
-  if      (alarmMinute > currentMinute) waitMinutes = alarmMinute - currentMinute;
+  if      (alarmMinute > currentMinute) waitMinutes = alarmMinute - currentMinute; 
   else if (alarmMinute < currentMinute) { 
 
-    uint8_t partMinutes = 60 - currentMinute;
-    waitMinutes = partMinutes + alarmMinute;
+    waitMinutes = (60 - currentMinute) + alarmMinute;
 
-    (waitHours == 0) ?    waitHours = 23 : waitHours -= 1; //IN MOST CASES: if end minutres < currentMinutes => wait time is 1 hour less        
-  
+    //IN MOST CASES: end minutres < currentMinutes => wait 1h less
+    (waitHours == 0) ?    waitHours = 23 : waitHours -= 1; 
   }
   else waitMinutes = 0;
 }
@@ -141,7 +135,7 @@ void calc_wait_time( uint8_t  currentHour, uint8_t  currentMinute,
 // put to sleep until the alarm needs to ring
 void set_alarm(uint8_t waitHours, uint8_t waitMinutes) {
   
-  waitMs =  1000UL*( (uint32_t)waitHours*60*60 + (uint32_t)waitMinutes*60 );
+  waitMs = 1000UL*( (uint32_t)waitHours*60*60 + (uint32_t)waitMinutes*60 );
 
   Serial.println("                                                                                                              ");
   Serial.print(waitMs); Serial.print("ms wait");
@@ -164,12 +158,7 @@ delay(3000);
 
 Serial.begin(115200);
 
-for(uint8_t freePin=A2; freePin <= A7; freePin++) {
-  pinMode(freePin, INPUT);
-  //Serial.println(freePin);//debug
-}
-
-pinMode(potentiometerScroll,   INPUT_PULLUP);
+pinMode(potentiometerScroll,   INPUT);
 
 pinMode(setAlarmOrEnter,       INPUT_PULLUP);
 pinMode(resetAlarmOrExit,      INPUT_PULLUP);
@@ -181,6 +170,8 @@ pinMode(chooseHoursOrFirst,    INPUT_PULLUP);
 pinMode(chooseMinutesOrSecond, INPUT_PULLUP);
 
 pinMode(buzzer, OUTPUT);
+
+//need to turn all unused pins to INPUT
 
 lcd.begin(16, 2);
 
@@ -202,17 +193,24 @@ void loop() {
 
 ms = millis();
 
+
 chooseHoursState = !digitalRead(chooseHoursOrFirst);
-if (chooseHoursState == false && prev_chooseHoursState == true) cursorAtHours = 1;
+if (chooseHoursState == false && prev_chooseHoursState == true) { 
+  
+  chooseHours = 1;  
+}
 prev_chooseHoursState = chooseHoursState;
 
 
 chooseMinutesState = !digitalRead(chooseMinutesOrSecond);
-if (chooseMinutesState == false && prev_chooseMinutesState == true) cursorAtHours = 0;
+if (chooseMinutesState == false && prev_chooseMinutesState == true) { 
+  
+  chooseHours = 0;
+}
 prev_chooseMinutesState = chooseMinutesState;
 
 
-if (cursorAtHours == 1) {
+if (chooseHours == 1) {
   lcd.setCursor(0,1); lcd.print("^^");
   lcd.setCursor(3,1); lcd.print("  ");
 
@@ -220,15 +218,13 @@ if (cursorAtHours == 1) {
   lcd.setCursor(0, 0); lcd.print(format_uint8_t(alarmHour)); lcd.print(":");
 }
 
-if (cursorAtHours == 0) {
+if (chooseHours == 0) {
   lcd.setCursor(0,1); lcd.print("  ");
   lcd.setCursor(3,1); lcd.print("^^");
 
   alarmMinute = map(analogRead(potentiometerScroll),   0, 1023,     0, 60);
   lcd.setCursor(3, 0); lcd.print(format_uint8_t(alarmMinute));
 }
-
-
 
 
 find_current_time(ms, START_HOUR, START_MINUTE, currentHour, currentMinute);
@@ -267,6 +263,8 @@ prev_stopAlarmState = stopAlarmState;
 
 //print debug info to serial every N ms
 if(ms - prevMs_SerialDebug >= msDebugToSerial) {
+
+  prevMs_SerialDebug = ms;
   
   Serial.print(ms); Serial.print(" ms from boot");  
   
@@ -289,10 +287,6 @@ if(ms - prevMs_SerialDebug >= msDebugToSerial) {
 
   Serial.print(minutesSinceBoot); Serial.print("m total"); Serial.print("  ");
   Serial.print(totalMinutes);     Serial.print(" m 0am boot day-now"); 
-  
-  Serial.print("  ");
-
-  Serial.print(cursorAtHours); Serial.print(" h chose");
 
   Serial.print("  ");
 
