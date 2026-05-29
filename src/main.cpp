@@ -17,16 +17,21 @@ pin
   D7 = 2;
 LiquidCrystal lcd(RS, E, D4, D5, D6, D7);
 
-pin potentiometerChooseTime = A1;
 
-pin stopAlarm = 6;
-pin setAlarm = 7;
-pin chooseHours = 8;
-pin chooseMinutes = 9;
+pin 
+  potentiometerScroll = A0,
 
-pin buzzer = 10;
+  setAlarmOrEnter = A1,
+  resetAlarmOrExit = A2,
 
-pin resetAlarmButton = A0;
+  stopAlarm = 6,
+
+  chooseHoursOrFirst = 7,
+  chooseMinutesOrSecond = 8,
+
+buzzer = 9;
+
+
 
 
 
@@ -55,7 +60,7 @@ bool  stopAlarmState     = false,   prev_stopAlarmState     = false;
 bool  chooseHoursState   = false,   prev_chooseHoursState   = false;
 bool  chooseMinutesState = false,   prev_chooseMinutesState = false;
 
-uint8_t cursorAtHours = 255; // other number than 0 or 1 //
+uint8_t cursorAtHours = 255; /* other number than 0 or 1 */
 
 
 
@@ -164,12 +169,17 @@ for(uint8_t freePin=A2; freePin <= A7; freePin++) {
   //Serial.println(freePin);//debug
 }
 
-pinMode(potentiometerChooseTime, INPUT_PULLUP);
-pinMode(stopAlarm,               INPUT_PULLUP);
-pinMode(setAlarm,                INPUT_PULLUP);
-pinMode(chooseHours,             INPUT_PULLUP);
-pinMode(chooseMinutes,           INPUT_PULLUP);
-pinMode(resetAlarmButton,        INPUT_PULLUP);
+pinMode(potentiometerScroll,   INPUT_PULLUP);
+
+pinMode(setAlarmOrEnter,       INPUT_PULLUP);
+pinMode(resetAlarmOrExit,      INPUT_PULLUP);
+
+
+pinMode(stopAlarm,             INPUT_PULLUP);
+
+pinMode(chooseHoursOrFirst,    INPUT_PULLUP);
+pinMode(chooseMinutesOrSecond, INPUT_PULLUP);
+
 pinMode(buzzer, OUTPUT);
 
 lcd.begin(16, 2);
@@ -192,12 +202,12 @@ void loop() {
 
 ms = millis();
 
-chooseHoursState = !digitalRead(chooseHours);
+chooseHoursState = !digitalRead(chooseHoursOrFirst);
 if (chooseHoursState == false && prev_chooseHoursState == true) cursorAtHours = 1;
 prev_chooseHoursState = chooseHoursState;
 
 
-chooseMinutesState = !digitalRead(chooseMinutes);
+chooseMinutesState = !digitalRead(chooseMinutesOrSecond);
 if (chooseMinutesState == false && prev_chooseMinutesState == true) cursorAtHours = 0;
 prev_chooseMinutesState = chooseMinutesState;
 
@@ -206,7 +216,7 @@ if (cursorAtHours == 1) {
   lcd.setCursor(0,1); lcd.print("^^");
   lcd.setCursor(3,1); lcd.print("  ");
 
-  alarmHour   = map(analogRead(potentiometerChooseTime),   0, 1023,     0, 24);
+  alarmHour   = map(analogRead(potentiometerScroll),   0, 1023,     0, 24);
   lcd.setCursor(0, 0); lcd.print(format_uint8_t(alarmHour)); lcd.print(":");
 }
 
@@ -214,7 +224,7 @@ if (cursorAtHours == 0) {
   lcd.setCursor(0,1); lcd.print("  ");
   lcd.setCursor(3,1); lcd.print("^^");
 
-  alarmMinute = map(analogRead(potentiometerChooseTime),   0, 1023,     0, 60);
+  alarmMinute = map(analogRead(potentiometerScroll),   0, 1023,     0, 60);
   lcd.setCursor(3, 0); lcd.print(format_uint8_t(alarmMinute));
 }
 
@@ -231,7 +241,7 @@ lcd.print(format_uint8_t(currentHour)); lcd.print(":"); lcd.print(format_uint8_t
 
 
 
-setAlarmState = !digitalRead(setAlarm);
+setAlarmState = !digitalRead(setAlarmOrEnter);
 if (setAlarmState == false && prev_setAlarmState == true) {
 
   lcd.setCursor(6, 1); lcd.print("Alarm");
